@@ -1,23 +1,13 @@
 import numpy as np
 
 
-def integral_image(img):
-    """Compute the integral image of an image.
-
-    Parameters
-    ----------
-    image : (M, N) ndarray
-        Input image.
-
-    Returns
-    -------
-    integral_image : (M, N) ndarray
-        Integral image.
-
+def integral_image(img: np.ndarray) -> np.ndarray:
+    """Compute the integral image
+    @img: Image whose integral image is to be calculated
     """
 
-    iimg = np.zeros_like(img, dtype=np.int32)
-    rowsum = np.zeros_like(img, dtype=np.int32)
+    iimg = np.zeros_like(img)
+    rowsum = np.zeros_like(img)
 
     for x in range(img.shape[0]):
         for y in range(img.shape[1]):
