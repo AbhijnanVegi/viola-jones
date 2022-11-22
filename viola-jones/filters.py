@@ -69,18 +69,27 @@ class HaarFilter:
 
 class TwoColumnFilter(HaarFilter):
     def __init__(self, width, height):
+        self.width = width
+        self.height = height
+        
         if (width %2 != 0):
             raise ValueError("Width must be even")
         super().__init__([Rect(0,0,width//2-1,height - 1)], [Rect(0,width//2,width//2 - 1,height - 1)])
 
 class TwoRowFilter(HaarFilter):
     def __init__(self, width, height):
+        self.width = width
+        self.height = height
+
         if (height %2 != 0):
             raise ValueError("Height must be even")
         super().__init__([Rect(0,0,width-1,height//2 - 1)], [Rect(height//2,0,width-1,height//2 - 1)])
 
 class ThreeColumnFilter(HaarFilter):
     def __init__(self, width, height):
+        self.width = width
+        self.height = height
+
         if width%3 != 0:
             raise ValueError("Width must be divisible by 3")
 
@@ -88,12 +97,71 @@ class ThreeColumnFilter(HaarFilter):
 
 class QuadFilter(HaarFilter):
     def __init__(self, width, height):
+        self.width = width
+        self.height = height
+
         if width != height:
             raise ValueError("Width and height must be equal")
         if width%2 != 0:
             raise ValueError("Width and height must be even")
         super().__init__([Rect(0,0,width//2 - 1,height//2 - 1), Rect(height//2,width//2,width//2 - 1,height//2 - 1)],
                          [Rect(0,height//2,width//2 - 1,height//2 - 1), Rect(width//2,0,width//2 - 1,height//2 - 1)])
+
+
+def build_features(width, height):
+    features = []
+
+    for i in range(1, width):
+        for j in range(1, height):
+            try:
+                features.append(TwoColumnFilter(i, j))
+            except ValueError:
+                pass
+
+            try:
+                features.append(TwoRowFilter(i, j))
+            except ValueError:
+                pass
+
+            try:
+                features.append(ThreeColumnFilter(i, j))
+            except ValueError:
+                pass
+
+            try:
+                features.append(QuadFilter(i, j))
+            except ValueError:
+                pass
+
+    return features
+
+def apply_features(iimg, filters):
+    """
+    iimg - integral image
+    filters - list of filters
+    """
+
+    result = []
+
+    for i in range(iimg.shape[0]):
+        for j in range(iimg.shape[1]):
+            for filter in filters:
+                if i + filter.height > iimg.shape[0] or j + filter.width > iimg.shape[1]:
+                    continue
+                score = filter.apply(iimg, i, j)
+                result.append((i, j, score))
+
+    return result            
+
+def test_apply_features():
+    iimg = np.zeros((24,24))
+    features = build_features(24, 24)
+    result = apply_features(iimg, features)
+    print("Number of results: ", len(result))
+
+def test_build_features():
+    features = build_features(24, 24)
+    print("Number of features: ", len(features))
 
 
 def test_regional_sum():
@@ -147,4 +215,5 @@ if __name__ == "__main__":
     test_two_row()
     test_three_column()
     test_quad_filter()
-            
+    test_build_features()
+    test_apply_features()
