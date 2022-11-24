@@ -16,6 +16,20 @@ class RapidObjectDetector:
 
         features = build_features(h, w)
         X__ff = np.array([apply_features(x, features) for x in X_ii])
-        X_ff = np.array(X_ff)
+        X_ff = np.array(X__ff)
+
+        # Initialise AdaBoost weights
+        positives = np.count_nonzero(y)
+        negatives = len(y) - positives
+        
+        weights = np.zeros(len(y))
+
+        for i in range(len(y)):
+            if y[i] == 1:
+                weights[i] = 1 / (2 * positives)
+            else:
+                weights[i] = 1 / (2 * negatives)
+
+        print(positives, negatives)
     
         

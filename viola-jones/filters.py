@@ -46,21 +46,21 @@ class HaarFilter:
         self.white_rect = white_rect
         self.black_rect = black_rect
 
-    def apply(self, iimg, x, y):
+    def apply(self, iimg):
         white_sum:float = 0
         black_sum:float = 0
 
         for rect in self.white_rect:
 
-            top_left = (x + rect.x ,y + rect.y)
-            bottom_right = (x + rect.br[0],y + rect.br[1])
+            top_left = (rect.x ,rect.y)
+            bottom_right = (rect.br[0], rect.br[1])
 
             white_sum += regional_sum(iimg, top_left, bottom_right)
 
         for rect in self.black_rect:
 
-            top_left = (x + rect.x ,y + rect.y)
-            bottom_right = (x + rect.br[0],y + rect.br[1])
+            top_left = (rect.x , rect.y)
+            bottom_right = (rect.br[0], rect.br[1])
 
             black_sum += regional_sum(iimg, top_left, bottom_right)
 
@@ -68,70 +68,93 @@ class HaarFilter:
 
 
 class TwoColumnFilter(HaarFilter):
-    def __init__(self, width, height):
-        self.width = width
-        self.height = height
+    def __init__(self, x,y, w, h):
+        self.x = x
+        self.y = y
+        self.w = w
+        self.h = h
         
-        if (width %2 != 0):
+        if (w %2 != 0):
             raise ValueError("Width must be even")
-        super().__init__([Rect(0,0,width//2-1,height - 1)], [Rect(0,width//2,width//2 - 1,height - 1)])
+        super().__init__([Rect(x,y,w//2-1,h - 1)], [Rect(x,y + w//2,w//2 - 1,h - 1)])
+
+    def __str__(self) -> str:
+        return f"TwoColumnFilter({self.x}, {self.y}, {self.w}, {self.h})"
 
 class TwoRowFilter(HaarFilter):
-    def __init__(self, width, height):
-        self.width = width
-        self.height = height
+    def __init__(self,x,y, w, h):
+        self.x = x
+        self.y = y
+        self.w = w
+        self.h = h
 
-        if (height %2 != 0):
+        if (h %2 != 0):
             raise ValueError("Height must be even")
-        super().__init__([Rect(0,0,width-1,height//2 - 1)], [Rect(height//2,0,width-1,height//2 - 1)])
+        super().__init__([Rect(x,y,w-1,h//2 - 1)], [Rect(x + h//2,y,w-1,h//2 - 1)])
+
+    def __str__(self) -> str:
+        return f"TwoRowFilter({self.x}, {self.y}, {self.w}, {self.h})"
 
 class ThreeColumnFilter(HaarFilter):
-    def __init__(self, width, height):
-        self.width = width
-        self.height = height
+    def __init__(self,x,y, w, h):
+        self.x = x
+        self.y = y
+        self.w = w
+        self.h = h
 
-        if width%3 != 0:
+        if w%3 != 0:
             raise ValueError("Width must be divisible by 3")
 
-        super().__init__([Rect(0,0,width//3 - 1,height - 1), Rect(0,2*width//3,width//3 - 1,height - 1)], [Rect(0,width//3,width//3 - 1,height - 1)])
+        super().__init__([Rect(x,y,w//3 - 1,h - 1), Rect(x,y + 2*w//3,w//3 - 1,h - 1)], [Rect(x, y + w//3,w//3 - 1,h - 1)])
+
+    def __str__(self) -> str:
+        return f"ThreeColumnFilter({self.x}, {self.y}, {self.w}, {self.h})"
+
 
 class QuadFilter(HaarFilter):
-    def __init__(self, width, height):
-        self.width = width
-        self.height = height
+    def __init__(self,x,y, w, h):
+        self.x = x
+        self.y = y
+        self.w = w
+        self.h = h
 
-        if width != height:
+        if w != h:
             raise ValueError("Width and height must be equal")
-        if width%2 != 0:
+        if w%2 != 0:
             raise ValueError("Width and height must be even")
-        super().__init__([Rect(0,0,width//2 - 1,height//2 - 1), Rect(height//2,width//2,width//2 - 1,height//2 - 1)],
-                         [Rect(0,height//2,width//2 - 1,height//2 - 1), Rect(width//2,0,width//2 - 1,height//2 - 1)])
+        super().__init__([Rect(x,y,w//2 - 1,h//2 - 1), Rect(x + h//2,y + w//2,w//2 - 1,h//2 - 1)],
+                         [Rect(x,y+ w//2,w//2 - 1,h//2 - 1), Rect(x + h//2,y,w//2 - 1,h//2 - 1)])
+
+    def __str__(self) -> str:
+        return f"QuadFilter({self.x}, {self.y}, {self.w}, {self.h})"
 
 
 def build_features(width, height):
     features = []
 
-    for i in range(1, width):
-        for j in range(1, height):
-            try:
-                features.append(TwoColumnFilter(i, j))
-            except ValueError:
-                pass
+    for w in range(1, width+1):
+        for h in range(1, height+1):
+            for y in range(0, width - w+1):
+                for x in range(0, height - h+1):
+                    try:
+                        features.append(TwoColumnFilter(x,y,w,h))
+                    except ValueError:
+                        pass
 
-            try:
-                features.append(TwoRowFilter(i, j))
-            except ValueError:
-                pass
+                    try:
+                        features.append(TwoRowFilter(x,y,w,h))
+                    except ValueError:
+                        pass
 
-            try:
-                features.append(ThreeColumnFilter(i, j))
-            except ValueError:
-                pass
+                    try:
+                        features.append(ThreeColumnFilter(x,y,w,h))
+                    except ValueError:
+                        pass
 
-            try:
-                features.append(QuadFilter(i, j))
-            except ValueError:
-                pass
+                    try:
+                        features.append(QuadFilter(x,y,w,h))
+                    except ValueError:
+                        pass
 
     return features
 
@@ -143,13 +166,12 @@ def apply_features(iimg, filters):
 
     result = []
 
-    for i in range(iimg.shape[0]):
-        for j in range(iimg.shape[1]):
-            for filter in filters:
-                if i + filter.height > iimg.shape[0] or j + filter.width > iimg.shape[1]:
-                    continue
-                score = filter.apply(iimg, i, j)
-                result.append((i, j, score))
+    for filter in filters:
+        try:
+            score = filter.apply(iimg)
+        except:
+            print("Error applying filter: ", filter)
+        result.append(score)
 
     return result            
 
@@ -176,16 +198,16 @@ def test_two_column():
     # img = np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]], dtype=np.int32)
     iimg = np.array([[1, 3, 6], [5, 12, 21], [12, 27, 45]])
 
-    filter = TwoColumnFilter(2, 2)
-    score = filter.apply(iimg, 0, 0)
+    filter = TwoColumnFilter(0,0,2, 2)
+    score = filter.apply(iimg)
     assert(score == -2)
     print("Two column filter test passed")
 
 def test_two_row():
     iimg = np.array([[1, 3, 6], [5, 12, 21], [12, 27, 45]])
 
-    filter = TwoRowFilter(2, 2)
-    score = filter.apply(iimg, 0, 0)
+    filter = TwoRowFilter(0,0,2, 2)
+    score = filter.apply(iimg)
 
     assert(score == -6)
     print("Two row filter test passed")
@@ -193,8 +215,8 @@ def test_two_row():
 def test_three_column():
     iimg = np.array([[1, 3, 6], [5, 12, 21], [12, 27, 45]])
 
-    filter = ThreeColumnFilter(3, 3)
-    score = filter.apply(iimg, 0, 0)
+    filter = ThreeColumnFilter(0,0,3, 3)
+    score = filter.apply(iimg)
 
     assert(score == 15)
     print("Three column filter test passed")
@@ -202,8 +224,8 @@ def test_three_column():
 def test_quad_filter():
     iimg = np.array([[1, 3, 6], [5, 12, 21], [12, 27, 45]])
 
-    filter = QuadFilter(2, 2)
-    score = filter.apply(iimg, 0, 0)
+    filter = QuadFilter(0,0,2, 2)
+    score = filter.apply(iimg)
 
     assert(score == 0)
     print("Quad filter test passed")

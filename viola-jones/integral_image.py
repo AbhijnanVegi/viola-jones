@@ -6,8 +6,8 @@ def integral_image(img: np.ndarray) -> np.ndarray:
     @img: Image whose integral image is to be calculated
     """
 
-    iimg = np.zeros_like(img)
-    rowsum = np.zeros_like(img)
+    iimg = np.zeros_like(img, dtype=np.int64)
+    rowsum = np.zeros_like(img, dtype=np.int64)
 
     for x in range(img.shape[0]):
         for y in range(img.shape[1]):
