@@ -14,15 +14,17 @@ class WeakClassifier():
 
 class RapidObjectDetector:
     def __init__(self, layers):
-        self.layers = layers
-        self.X_ff = None
-        self.y = None
-        self.features = None
+        self.layer_count = layers
+        self.layers = []
+        self.X_ff = []
+        self.y = []
+        self.features = []
 
-    def train(self, X, y, rounds=10) :
+    def train(self, X, y) :
         h = X.shape[1]
         w = X.shape[2]
 
+        self.X = X
         # Create integral image
         X_iimg = [integral_image(x) for x in X]
         X_ii = np.array(X_iimg)
@@ -46,12 +48,30 @@ class RapidObjectDetector:
 
         print(positives, negatives)
 
+        pos , neg = [],[]
+        for i, y in enumerate(y):
+            if y == 1:
+                pos.append(X[i])
+            else:
+                neg.append(X[i])
+
+        for i in range(self.layer_count):
+            if len(neg) == 0:
+                print("No negatives left")
+            self._train_layer(3, X__ff, self.y)
+            fp = []
+            for sample in neg:
+                if self._predict_layer(sample, self.layers[i]) == 1:
+                    fp.append(sample)
+
+            neg = fp
+
     def _train_weak(self, X_ff, y, weights, features):
         
         pos, neg = 0,0
         
-        for i, y in enumerate(y):
-            if y == 1:
+        for i, label in enumerate(y):
+            if label == 1:
                 pos += weights[i]
             else:
                 neg += weights[i]
@@ -59,47 +79,46 @@ class RapidObjectDetector:
         clfs = []
 
         for i, feature in enumerate(features):
-
             curr_feature_scores = []
-            for j, x in enumerate(X_ff):
-                curr_feature_scores.append((x[i], y[j], weights[j]))
+            for j in range(len(X_ff)):
+                curr_feature_scores.append((X_ff[j][i], y[j], weights[j]))
 
             min_error = float('inf')
             best_threshold = 0
             best_polarity = 0
-            best_feature = None
+            best_feature = i
 
             posw, negw = 0,0
             poss, negs = 0,0
 
-            for x, y, w in sorted(curr_feature_scores, key=lambda x: x[0]):
+            curr_feature_scores.sort()
+            for x, label, w in curr_feature_scores:
                 error = min(negw + pos - posw, posw + neg - negw)
                 if error < min_error:
                     min_error = error
                     best_threshold = x
                     best_polarity = 1 if poss > negs else -1
-                    best_feature = feature
 
-                if y == 1:
+                if label == 1:
                     posw += w
                     poss += 1
                 else:
                     negw += w
                     negs += 1
             
-            clfs.append(WeakClassifier(best_feature, best_threshold, best_polarity))
+            clfs.append((best_feature, best_threshold, best_polarity))
 
         return clfs
 
     def _best_feature(self, clfs, weights):
-        best_clf, best_error, best_acc = 0, float('inf'), 0
+        best_feature, best_error, best_acc = 0, float('inf'), 0
 
-        for i, clf in enumerate(clfs):
+        for clf in clfs:
             err, acc = 0, []
-            assert(self.X_ff != None)
+            assert(len(self.X_ff) != 0)
 
-            for j, x in enumerate(self.X_ff):
-                chk = abs(clf.predict(x) - self.y[j])
+            for j,x in enumerate(self.X_ff):
+                chk = abs((1 if clf[2]*x[best_feature] < clf[2]*clf[1] else 0) - self.y[j])
                 acc.append(abs(chk))
                 err += weights[j] * chk
             
@@ -107,8 +126,9 @@ class RapidObjectDetector:
 
             if avg_error < best_error:
                 best_clf, best_error, best_acc = clf, err, acc
-                
-        return best_clf, best_error, best_acc
+
+        print(f"Selecting classifier {best_clf} with error {best_error} and acc {best_acc}")
+        return WeakClassifier(self.features[best_clf[0]], best_clf[1], best_clf[2]), best_error, best_acc
 
     def _train_layer(self, k, X_t, Y_t): 
         cnt_pos = 0

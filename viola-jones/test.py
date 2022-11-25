@@ -1,13 +1,12 @@
 from load_image import load_data
 from train import RapidObjectDetector
-
+import pickle
 import numpy as np
-import cv2
 
-X,y = load_data()
+X,y = load_data(3)
 
-# choose random ints 
-ind = np.random.choice(len(X), 100, replace=False)
+clf = RapidObjectDetector(1)
+clf.train(X,y)
 
-clf = RapidObjectDetector(5)
-clf.train(X[ind],y[ind])
+for i in range(6):
+    print(clf.predict(X[i]))
