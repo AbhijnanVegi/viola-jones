@@ -3,7 +3,7 @@ from train import RapidObjectDetector
 import pickle
 import numpy as np
 
-X,y = load_train_data(25)
+X,y = load_train_data(100)
 
 clf = RapidObjectDetector(5)
 clf.train(X,y)

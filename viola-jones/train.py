@@ -67,7 +67,7 @@ class RapidObjectDetector:
         for i in range(self.layer_count):
             if len(neg) == 0:
                 print("No negatives left")
-            self._train_layer(5*i, pos + neg, [1 for i in range(len(pos))] + [0 for i in range(len(neg))])
+            self._train_layer(i+1, pos + neg, [1 for i in range(len(pos))] + [0 for i in range(len(neg))])
             tp = []
             fp = []
             for sample in neg:
