@@ -17,17 +17,18 @@ class RapidObjectDetector:
         self.layers = layers
         self.X_ff = None
         self.y = None
+        self.features = None
 
     def train(self, X, y, rounds=10) :
-        h = X.shape[0]
-        w = X.shape[1]
+        h = X.shape[1]
+        w = X.shape[2]
 
         # Create integral image
         X_iimg = [integral_image(x) for x in X]
         X_ii = np.array(X_iimg)
 
-        features = build_features(h, w)
-        X__ff = np.array([apply_features(x, features) for x in X_ii])
+        self.features = build_features(w, h)
+        X__ff = np.array([apply_features(x, self.features) for x in X_ii])
         self.X_ff = np.array(X__ff)
         self.y = y
 
@@ -109,12 +110,49 @@ class RapidObjectDetector:
                 
         return best_clf, best_error, best_acc
 
+    def _train_layer(self, k, X_t, Y_t): 
+        cnt_pos = 0
+        cnt_neg = 0
 
+        layer = []
 
+        for y in Y_t:
+            if y == 1:
+                cnt_pos += 1
+            else:
+                cnt_neg += 1
 
-
-
-
-
-    
+        weights = np.zeros(len(Y_t))
         
+        for i, y in enumerate(Y_t):
+            if y == 1:
+                weights[i] = 1 / (2 * cnt_pos)
+            else:
+                weights[i] = 1 / (2 * cnt_neg)
+
+        for i in range(k):
+            weights = weights / np.linalg.norm(weights)
+            clfs = self._train_weak(X_t, Y_t, weights, self.features)
+            best_clf, best_error, best_acc = self._best_feature(clfs, weights)
+            beta = best_error / (1 - best_error)
+            weights = np.multiply(weights, np.power(beta, np.subtract(1, best_acc)))
+            layer.append((best_clf, np.log(1/beta)))
+
+        self.layers.append(layer)
+
+    def _predict_layer(self, x, layer):
+        x = integral_image(x)
+        sum_betas = 0
+        score = 0
+        for clf, beta in layer:
+            sum_betas += beta
+            score += beta * clf.predict(x)
+
+        return 1 if score >= 0.5*sum_betas else 0
+
+    def predict(self, x):
+        for layer in self.layers:
+            if self._predict_layer(x, layer) == 0:
+                return 0
+        
+        return 1
