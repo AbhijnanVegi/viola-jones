@@ -177,3 +177,21 @@ class RapidObjectDetector:
                 return 0
         
         return 1
+
+    def faster_predict(self, x):
+        h_image = x.shape[0]
+        w_image = x.shape[1]
+
+        x_indices = np.ndarray(range(1, 20))
+        y_indices = np.ndarray(range(1, 20))
+
+        while x_indices[-1] < w_image and y_indices[-1] < h_image:
+            image_window = x[y_indices[0]:y_indices[-1], x_indices[0]:x_indices[-1]]
+            if self.predict(image_window) == 1:
+                print("Found face")
+                return True
+            x_indices += 1
+            y_indices += 1
+            
+
+        
