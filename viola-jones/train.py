@@ -15,6 +15,8 @@ class WeakClassifier():
 class RapidObjectDetector:
     def __init__(self, layers):
         self.layers = layers
+        self.X_ff = None
+        self.y = None
 
     def train(self, X, y, rounds=10) :
         h = X.shape[0]
@@ -26,7 +28,8 @@ class RapidObjectDetector:
 
         features = build_features(h, w)
         X__ff = np.array([apply_features(x, features) for x in X_ii])
-        X_ff = np.array(X__ff)
+        self.X_ff = np.array(X__ff)
+        self.y = y
 
         # Initialise AdaBoost weights
         positives = np.count_nonzero(y)
@@ -86,6 +89,26 @@ class RapidObjectDetector:
             clfs.append(WeakClassifier(best_feature, best_threshold, best_polarity))
 
         return clfs
+
+    def _best_feature(self, clfs, weights):
+        best_clf, best_error, best_acc = 0, float('inf'), 0
+
+        for i, clf in enumerate(clfs):
+            err, acc = 0, []
+            assert(self.X_ff != None)
+
+            for j, x in enumerate(self.X_ff):
+                chk = abs(clf.predict(x) - self.y[j])
+                acc.append(abs(chk))
+                err += weights[j] * chk
+            
+            avg_error = err/len(weights)
+
+            if avg_error < best_error:
+                best_clf, best_error, best_acc = clf, err, acc
+                
+        return best_clf, best_error, best_acc
+
 
 
 
