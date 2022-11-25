@@ -5,7 +5,7 @@ import numpy as np
 
 X,y = load_data(3)
 
-clf = RapidObjectDetector(1)
+clf = RapidObjectDetector(5)
 clf.train(X,y)
 
 for i in range(6):

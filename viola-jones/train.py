@@ -58,7 +58,7 @@ class RapidObjectDetector:
         for i in range(self.layer_count):
             if len(neg) == 0:
                 print("No negatives left")
-            self._train_layer(3, X__ff, self.y)
+            self._train_layer(1, X__ff, self.y)
             fp = []
             for sample in neg:
                 if self._predict_layer(sample, self.layers[i]) == 1:
@@ -111,17 +111,17 @@ class RapidObjectDetector:
         return clfs
 
     def _best_feature(self, clfs, weights):
-        best_feature, best_error, best_acc = 0, float('inf'), 0
+        best_clf, best_error, best_acc = 0, float('inf'), 0
 
         for clf in clfs:
             err, acc = 0, []
             assert(len(self.X_ff) != 0)
 
             for j,x in enumerate(self.X_ff):
-                chk = abs((1 if clf[2]*x[best_feature] < clf[2]*clf[1] else 0) - self.y[j])
+                chk = abs((1 if clf[2]*x[clf[0]] < clf[2]*clf[1] else 0) - self.y[j])
                 acc.append(abs(chk))
                 err += weights[j] * chk
-            
+
             avg_error = err/len(weights)
 
             if avg_error < best_error:
@@ -151,10 +151,11 @@ class RapidObjectDetector:
                 weights[i] = 1 / (2 * cnt_neg)
 
         for i in range(k):
-            weights = weights / np.linalg.norm(weights)
+            weights = weights / np.sum(weights)
             clfs = self._train_weak(X_t, Y_t, weights, self.features)
             best_clf, best_error, best_acc = self._best_feature(clfs, weights)
             beta = best_error / (1 - best_error)
+            print(best_error)
             weights = np.multiply(weights, np.power(beta, np.subtract(1, best_acc)))
             layer.append((best_clf, np.log(1/beta)))
 
