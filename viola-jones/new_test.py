@@ -3,7 +3,7 @@ from detector import RapidDetector
 
 X, y = load_train_data(100)
 
-clf = RapidDetector([1,3,5,7,10])
+clf = RapidDetector([1,10,25,25,50])
 clf.train(X,y)
 
 # Test training accuracy
