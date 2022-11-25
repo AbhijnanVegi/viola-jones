@@ -3,14 +3,23 @@ from filters import *
 import numpy as np
 
 class WeakClassifier():
-    def __init__(self, feature, threshold, polarity) -> None:
+    def __init__(self, feature, threshold, polarity, ft_num) -> None:
         self.feature = feature
         self.threshold = threshold
         self.polarity = polarity
+        self.ft_num = ft_num
 
-    def predict(self, iimg):
+    def predict(self, img):
+        iimg = integral_image(img)
+        return self._predict_iimg(iimg)
+
+    def _predict_iimg(self, iimg):
         score = self.feature.apply(iimg)
         return 1 if self.polarity * score < self.polarity * self.threshold else 0
+
+    def _predict_ff(self, X_ff):
+        score = X_ff[self.ft_num]
+        return 1 if self.polarity * score < self.polarity * self.threshold else 0 
 
 class RapidObjectDetector:
     def __init__(self, layers):
@@ -51,19 +60,25 @@ class RapidObjectDetector:
         pos , neg = [],[]
         for i, y in enumerate(y):
             if y == 1:
-                pos.append(X[i])
+                pos.append(self.X_ff[i])
             else:
-                neg.append(X[i])
+                neg.append(self.X_ff[i])
 
         for i in range(self.layer_count):
             if len(neg) == 0:
                 print("No negatives left")
-            self._train_layer(1, X__ff, self.y)
+            self._train_layer(5*i, pos + neg, [1 for i in range(len(pos))] + [0 for i in range(len(neg))])
+            tp = []
             fp = []
             for sample in neg:
-                if self._predict_layer(sample, self.layers[i]) == 1:
+                if self._predict_layer_ff(sample, self.layers[i]) == 1:
                     fp.append(sample)
+            
+            for sample in pos:
+                if self._predict_layer_ff(sample, self.layers[i]) == 1:
+                    tp.append(sample)
 
+            pos = tp
             neg = fp
 
     def _train_weak(self, X_ff, y, weights, features):
@@ -110,25 +125,25 @@ class RapidObjectDetector:
 
         return clfs
 
-    def _best_feature(self, clfs, weights):
+    def _best_feature(self,X_ff, y, clfs, weights):
         best_clf, best_error, best_acc = 0, float('inf'), 0
 
         for clf in clfs:
             err, acc = 0, []
-            assert(len(self.X_ff) != 0)
+            assert(len(X_ff) != 0)
 
-            for j,x in enumerate(self.X_ff):
-                chk = abs((1 if clf[2]*x[clf[0]] < clf[2]*clf[1] else 0) - self.y[j])
+            for j,x in enumerate(X_ff):
+                chk = abs((1 if clf[2]*x[clf[0]] < clf[2]*clf[1] else 0) - y[j])
                 acc.append(abs(chk))
                 err += weights[j] * chk
 
             avg_error = err/len(weights)
 
             if avg_error < best_error:
-                best_clf, best_error, best_acc = clf, err, acc
+                best_clf, best_error, best_acc = clf, avg_error, acc
 
-        print(f"Selecting classifier {best_clf} with error {best_error} and acc {best_acc}")
-        return WeakClassifier(self.features[best_clf[0]], best_clf[1], best_clf[2]), best_error, best_acc
+        print(best_error)
+        return WeakClassifier(self.features[best_clf[0]], best_clf[1], best_clf[2], best_clf[0]), best_error, best_acc
 
     def _train_layer(self, k, X_t, Y_t): 
         cnt_pos = 0
@@ -153,9 +168,8 @@ class RapidObjectDetector:
         for i in range(k):
             weights = weights / np.sum(weights)
             clfs = self._train_weak(X_t, Y_t, weights, self.features)
-            best_clf, best_error, best_acc = self._best_feature(clfs, weights)
+            best_clf, best_error, best_acc = self._best_feature(X_t, Y_t, clfs, weights)
             beta = best_error / (1 - best_error)
-            print(best_error)
             weights = np.multiply(weights, np.power(beta, np.subtract(1, best_acc)))
             layer.append((best_clf, np.log(1/beta)))
 
@@ -168,6 +182,16 @@ class RapidObjectDetector:
         for clf, beta in layer:
             sum_betas += beta
             score += beta * clf.predict(x)
+
+        return 1 if score >= 0.5*sum_betas else 0
+
+
+    def _predict_layer_ff(self, x_ff, layer):
+        sum_betas = 0
+        score = 0
+        for clf, beta in layer:
+            sum_betas += beta
+            score += beta * clf._predict_ff(x_ff)
 
         return 1 if score >= 0.5*sum_betas else 0
 
