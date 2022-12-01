@@ -2,11 +2,14 @@ import cv2
 import os
 import numpy as np
 
-def load_train_data(num=50):
+def load_train_data(num):
     # open directory
     faces = os.listdir('train/face')
 
-    ind = np.random.choice(len(faces), num, replace=False)
+    if num != -1:
+        ind = np.random.choice(len(faces), num, replace=False)
+    else:
+        ind = np.arange(len(faces))
 
     images = []
     labels = []

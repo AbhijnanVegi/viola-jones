@@ -48,7 +48,6 @@ class VJClassifier:
                 weights[i] = 1 / (2 * neg)
 
         self.features = build_features(X.shape[1], X.shape[2])
-
         X_ii = np.array([integral_image(x) for x in X])
         self.X_ff = np.array([apply_features(x, self.features) for x in X_ii])
 
@@ -60,6 +59,8 @@ class VJClassifier:
             best_clf, best_error, best_acc = self._best_clf(clfs, weights)
             #update weights
             beta = best_error / (1 - best_error)
+            if (beta == 0):
+                beta = 0.0001
             weights = np.multiply(weights, np.power(beta, np.subtract(1, best_acc)))
             alpha = np.log(1 / beta)
             print("Best error: ", best_error, "Alpha: ", alpha)
@@ -68,13 +69,7 @@ class VJClassifier:
         
     def _train_clf(self, weights):
 
-        count_pos, count_neg = 0, 0
-
-        for i in range(len(weights)):
-            if self.y[i] == 1:
-                count_pos += weights[i]
-            else:
-                count_neg += weights[i]
+        count_pos, count_neg = np.sum(weights[np.where(self.y == 1)]), np.sum(weights[np.where(self.y == 0)])
 
         classifiers = []
 
